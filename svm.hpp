@@ -21,7 +21,7 @@ public:
 			delete[] weight;
 	}
 
-	void BLSVMTrain(int m, int n, float *X, int *y, float c);
+	void BLSVMTrain(int m, int n, float *X, int *y, float c, int ker = 0, float arg = 0.0f);
 	bool saveModel(const std::string model);
 	bool readModel(const std::string model);
 	bool predict(int n, float *X, int &y);
@@ -181,10 +181,10 @@ bool BLSVM::predict(int m, int n, float *X, int *y)
 		for (; i < m; i++, pX += n)
 		{
 			float pre = 0.0f;
-			for (; j < n; j++)
+			for (j = 0; j < n; j++)
 				pre += weight[j] * pX[j];
 			pre += weight[n];
-			y[i] = ((pre >= 0) ? 1 : -1);
+			y[i] = (pre >= 0 ? 1 : -1);
 		}
 	}
 	catch (const std::exception& e)
@@ -196,8 +196,14 @@ bool BLSVM::predict(int m, int n, float *X, int *y)
 	return true;
 }
 
-void BLSVM::BLSVMTrain(int m, int n, float *X, int *y, float c)
+void BLSVM::BLSVMTrain(int m, int n, float *X, int *y, float c, int ker, float arg)
 {
+	if (ker < 0 || ker > 2)
+	{
+		std::cerr << "wrong kernel index\n0: linear, 1: polynomial, 2:gaussian" << std::endl;
+		return;
+	}
+
 	dim = n;
 	if (weight != NULL)
 	{
@@ -211,7 +217,7 @@ void BLSVM::BLSVMTrain(int m, int n, float *X, int *y, float c)
 	float *a = new float[m];
 	byte  *s = new byte[m];
 
-	KernelMatrix(m, n, X, y, 0, 0, A);
+	KernelMatrix(m, n, X, y, ker, arg, A);
 
 	const float tol = 0.001f;
 	int t = FSMO(m, A, y, a, c, tol);
@@ -227,7 +233,7 @@ void BLSVM::BLSVMTrain(int m, int n, float *X, int *y, float c)
 		}
 		else s[i] = 0;
 	}
-	//printf("ker = %d, arg = %.2f, fsmo = %d, nsv = %d", ker, arg, t, nsv);
+	printf("ker = %d, arg = %.2f, fsmo = %d, nsv = %d\n", ker, arg, t, nsv);
 
 	// linear svm
 	float *w = new float[n];
